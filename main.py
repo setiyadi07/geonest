@@ -708,6 +708,11 @@ Mark as follow-up (is_followup: true) when the user:
 - Family/lifestyle fit questions after a search: "suitable for family?", "good for expats?",
   "cocok untuk keluarga?", "bisa untuk anak kecil?"
 
+- Greetings and social messages: "thanks", "thank you", "terimakasih", "makasih", "thx",
+  "ok", "oke", "great", "nice", "good", "wow", "hello", "hi", "halo", "noted",
+  "got it", "I see", "awesome", "perfect", "bagus", "mantap", "sip", "siap"
+- Farewells: "bye", "goodbye", "sampai jumpa", "dadah"
+
 Do NOT mark as follow-up when the user clearly starts a NEW search with a location, budget,
 or new criteria (e.g. "find me a villa in Ubud under 10 juta").
 
@@ -877,7 +882,20 @@ async def geonest_webhook(body: WebhookBody):
 
     # ── FOLLOW-UP handling ────────────────────────────────
     if filters.get("is_followup"):
-        if body.last_property:
+        greetings = {"thanks", "thank you", "terimakasih", "makasih", "thx",
+                     "ok", "oke", "great", "nice", "good", "wow", "noted",
+                     "got it", "awesome", "perfect", "bagus", "mantap", "sip",
+                     "siap", "hello", "hi", "halo", "bye", "goodbye", "dadah",
+                     "sampai jumpa"}
+        is_social = query.strip().lower().rstrip("!.,") in greetings
+
+        if is_social:
+            context = (
+                "\n\nThe user sent a casual/social message. Respond warmly and briefly. "
+                "If they said thanks, acknowledge it and invite them to search again. "
+                "Max 2 sentences. No property data needed."
+            )
+        elif body.last_property:
             prop = body.last_property
             context = (
                 f"\n\nThe user is asking about this property that was just shown to them:\n"
