@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: geonest
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false       # set this manually in Render dashboard
+      - key: ACCESS_CODE
+        value: B4liGo     # change this to your preferred access code

@@ -1,0 +1,1577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GeoNest — Bali Property Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --ivory: #f8f5f0;
+  --ivory2: #f2ede6;
+  --ivory3: #ebe4da;
+  --stone: #e0d8cc;
+  --stone2: #c8bfb2;
+  --warm-gray: #9a9088;
+  --mid: #6b6258;
+  --dark: #2c2620;
+  --darker: #1a1510;
+  --accent: #8b6914;
+  --accent2: #a07c1e;
+  --accent-light: #f0e8d0;
+  --green-safe: #3d7a5c;
+  --green-safe-bg: #e8f3ed;
+  --amber-warn: #a0620a;
+  --amber-warn-bg: #fdf0e0;
+  --red-risk: #8b3a3a;
+  --red-risk-bg: #fbeaea;
+  --serif: 'Cormorant Garamond', Georgia, serif;
+  --sans: 'Inter', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+  --shadow-sm: 0 1px 3px rgba(44,38,32,0.08);
+  --shadow-md: 0 4px 16px rgba(44,38,32,0.10);
+  --shadow-lg: 0 8px 40px rgba(44,38,32,0.14);
+  --radius: 2px;
+  --radius-md: 4px;
+}
+
+html, body { height: 100%; overflow: hidden; }
+body {
+  background: var(--ivory);
+  color: var(--dark);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── HEADER ── */
+.header {
+  height: 64px;
+  background: var(--darker);
+  display: flex;
+  align-items: center;
+  padding: 0 32px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+.logo {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.logo-name {
+  font-family: var(--serif);
+  font-size: 26px;
+  font-weight: 300;
+  color: var(--ivory);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.logo-sep {
+  width: 1px;
+  height: 18px;
+  background: rgba(255,255,255,0.2);
+  margin: 0 16px;
+  align-self: center;
+}
+.logo-sub {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 300;
+  color: var(--warm-gray);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.live-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--stone2);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.live-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: #6aad8a;
+  box-shadow: 0 0 0 2px rgba(106,173,138,0.3);
+  animation: livepulse 2.5s ease-in-out infinite;
+}
+@keyframes livepulse {
+  0%,100% { box-shadow: 0 0 0 2px rgba(106,173,138,0.3); }
+  50% { box-shadow: 0 0 0 4px rgba(106,173,138,0.15); }
+}
+.header-ver {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--mid);
+  letter-spacing: 0.1em;
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 3px 8px;
+  border-radius: 2px;
+}
+
+/* ── LAYOUT ── */
+.workspace {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 380px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--ivory);
+  border-right: 1px solid var(--stone);
+  position: relative;
+  z-index: 5;
+}
+
+.sidebar-head {
+  padding: 24px 28px 16px;
+  border-bottom: 1px solid var(--stone);
+  background: var(--ivory2);
+}
+.sidebar-title {
+  font-family: var(--sans);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--dark);
+  letter-spacing: 0;
+  margin-bottom: 4px;
+}
+.sidebar-desc {
+  font-size: 11px;
+  color: var(--warm-gray);
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+}
+
+/* chat */
+.chat-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.chat-scroll::-webkit-scrollbar { width: 3px; }
+.chat-scroll::-webkit-scrollbar-thumb { background: var(--stone); }
+
+.msg-row { display: flex; flex-direction: column; gap: 2px; animation: msgIn 0.25s ease; }
+@keyframes msgIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: translateY(0); } }
+
+.msg-user-wrap { display: flex; justify-content: flex-end; }
+.msg-user-bubble {
+  background: var(--darker);
+  color: var(--ivory);
+  padding: 10px 16px;
+  border-radius: 12px 12px 2px 12px;
+  font-size: 13px;
+  line-height: 1.55;
+  max-width: 280px;
+  letter-spacing: 0.01em;
+}
+
+.msg-ai-wrap { display: flex; gap: 10px; align-items: flex-start; }
+.msg-ai-icon {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--ivory3);
+  border: 1px solid var(--stone);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 1px;
+}
+.msg-ai-icon svg { width: 12px; height: 12px; stroke: var(--accent); }
+.msg-ai-bubble {
+  background: var(--ivory2);
+  border: 1px solid var(--stone);
+  border-radius: 2px 12px 12px 12px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--mid);
+  line-height: 1.65;
+  max-width: 296px;
+}
+.msg-ai-bubble strong { color: var(--dark); font-weight: 500; }
+.msg-ai-bubble em { font-family: var(--serif); font-style: italic; color: var(--accent); }
+
+/* typing */
+.typing-dots { display: flex; gap: 4px; padding: 4px 0; }
+.typing-dots span {
+  width: 5px; height: 5px; border-radius: 50%; background: var(--stone2);
+  animation: dotpulse 1.4s infinite;
+}
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dotpulse { 0%,100%{opacity:0.3;transform:scale(0.8)} 50%{opacity:1;transform:scale(1)} }
+
+/* input area */
+.input-area {
+  border-top: 1px solid var(--stone);
+  padding: 16px 28px 20px;
+  background: var(--ivory2);
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+.chip {
+  font-size: 10px;
+  font-family: var(--mono);
+  color: var(--mid);
+  border: 1px solid var(--stone);
+  padding: 4px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+  background: var(--ivory);
+  transition: all 0.15s;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.chip:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.input-row { display: flex; gap: 8px; align-items: flex-end; }
+.query-input {
+  flex: 1;
+  background: var(--ivory);
+  border: 1px solid var(--stone2);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--dark);
+  resize: none;
+  outline: none;
+  min-height: 42px;
+  max-height: 110px;
+  line-height: 1.5;
+  transition: border-color 0.2s;
+}
+.query-input:focus { border-color: var(--accent2); }
+.query-input::placeholder { color: var(--stone2); }
+.submit-btn {
+  width: 42px; height: 42px;
+  background: var(--darker);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.18s;
+}
+.submit-btn:hover { background: var(--accent); }
+.submit-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.submit-btn svg { width: 16px; height: 16px; stroke: var(--ivory); fill: none; }
+
+/* ── MAIN CONTENT ── */
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--ivory);
+}
+
+/* tabs */
+.tabs {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--stone);
+  background: var(--ivory2);
+  padding: 0 24px;
+  height: 48px;
+  flex-shrink: 0;
+}
+.tab-btn {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--warm-gray);
+  padding: 0 4px;
+  height: 100%;
+  display: flex; align-items: center;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  margin-right: 28px;
+  transition: all 0.15s;
+  background: none; border-top: none; border-left: none; border-right: none;
+}
+.tab-btn:hover { color: var(--dark); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-count {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--warm-gray);
+  letter-spacing: 0.08em;
+}
+
+/* panel */
+.panels { flex: 1; position: relative; overflow: hidden; }
+.panel { position: absolute; inset: 0; display: none; }
+.panel.active { display: flex; flex-direction: column; }
+
+/* MAP */
+#map { flex: 1; }
+.map-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: var(--ivory);
+}
+.map-empty-icon { opacity: 0.15; }
+.map-empty-icon svg { width: 56px; height: 56px; stroke: var(--dark); }
+.map-empty p {
+  font-family: var(--serif);
+  font-size: 17px;
+  font-weight: 300;
+  color: var(--warm-gray);
+  text-align: center;
+  max-width: 220px;
+  line-height: 1.6;
+  font-style: italic;
+}
+
+/* TABLE */
+.table-outer { flex: 1; overflow-y: auto; }
+.table-outer::-webkit-scrollbar { width: 3px; }
+.table-outer::-webkit-scrollbar-thumb { background: var(--stone); }
+.prop-table { width: 100%; border-collapse: collapse; }
+.prop-table thead th {
+  padding: 10px 16px;
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--warm-gray);
+  background: var(--ivory2);
+  border-bottom: 1px solid var(--stone);
+  white-space: nowrap;
+  position: sticky; top: 0; z-index: 2;
+}
+.prop-table tbody tr {
+  border-bottom: 1px solid var(--stone);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.prop-table tbody tr:hover { background: var(--accent-light); }
+.prop-table tbody tr.active-row { background: #f5ede0; border-left: 3px solid var(--accent); }
+.prop-table td { padding: 12px 16px; vertical-align: middle; }
+
+.rank-glyph {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 300;
+  display: block;
+  text-align: center;
+}
+.r1 { color: #9a7a20; }
+.r2 { color: #7a7a7a; }
+.r3 { color: #8a5a30; }
+.rn { color: var(--warm-gray); }
+
+.tbl-name { font-size: 13px; font-weight: 500; color: var(--dark); margin-bottom: 2px; }
+.tbl-loc { font-family: var(--mono); font-size: 10px; color: var(--warm-gray); letter-spacing: 0.04em; }
+.tbl-price { font-family: var(--mono); font-size: 12px; color: var(--accent); font-weight: 400; }
+.score-badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 400;
+  padding: 3px 8px;
+  border-radius: 2px;
+  letter-spacing: 0.04em;
+}
+.sc-high { background: var(--green-safe-bg); color: var(--green-safe); }   /* ≥75  */
+.sc-mid  { background: var(--amber-warn-bg); color: var(--amber-warn); }   /* ≥50  */
+.sc-low  { background: var(--red-risk-bg);   color: var(--red-risk); }     /* <50  */
+
+/* risk warning badge — v6.1 emoji-based */
+.risk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+.rb-safe   { background: var(--green-safe-bg); color: var(--green-safe); }
+.rb-caution{ background: var(--amber-warn-bg); color: var(--amber-warn); }
+.rb-danger { background: var(--red-risk-bg);   color: var(--red-risk);   }
+.risk-pill {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+.rp-low  { background: var(--green-safe-bg); color: var(--green-safe); }
+.rp-mid  { background: var(--amber-warn-bg); color: var(--amber-warn); }
+.rp-high { background: var(--red-risk-bg);   color: var(--red-risk); }
+.tbl-num { font-family: var(--mono); font-size: 11px; color: var(--mid); }
+
+/* NARRATIVE */
+.narrative-scroll { flex: 1; overflow-y: auto; padding: 36px 40px; }
+.narrative-scroll::-webkit-scrollbar { width: 3px; }
+.narrative-scroll::-webkit-scrollbar-thumb { background: var(--stone); }
+.narr-eyebrow {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+.narr-title {
+  font-family: var(--serif);
+  font-size: 32px;
+  font-weight: 300;
+  color: var(--dark);
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+  margin-bottom: 8px;
+}
+.narr-meta {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--warm-gray);
+  letter-spacing: 0.08em;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--stone);
+}
+.narr-body {
+  font-size: 14px;
+  color: var(--mid);
+  line-height: 1.85;
+  white-space: pre-wrap;
+  letter-spacing: 0.01em;
+}
+.narr-body strong { color: var(--dark); font-weight: 500; }
+.narr-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+.narr-empty p {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--stone2);
+  text-align: center;
+  letter-spacing: 0.01em;
+  line-height: 1.6;
+}
+
+/* ── RANKING CARDS (top 10) ── */
+.ranking-scroll { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 10px; }
+.ranking-scroll::-webkit-scrollbar { width: 3px; }
+.ranking-scroll::-webkit-scrollbar-thumb { background: var(--stone); }
+.ranking-empty {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  font-family: var(--sans); font-size: 15px; color: var(--stone2); font-style: normal;
+}
+.rank-card {
+  background: var(--ivory2);
+  border: 1px solid var(--stone);
+  border-radius: 6px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+.rank-card:hover { background: var(--accent-light); border-color: var(--accent); transform: translateX(2px); }
+.rank-card.active-card { background: #f5ede0; border-color: var(--accent); border-left-width: 3px; }
+/* score gradient bar on left edge */
+.rank-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+}
+.rank-card.grade-high::before  { background: var(--green-safe); }
+.rank-card.grade-mid::before   { background: var(--amber-warn); }
+.rank-card.grade-low::before   { background: var(--red-risk); }
+.rank-card.active-card::before { background: var(--accent); }
+
+.rank-card-num {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--darker);
+  color: var(--ivory);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.rank-card-num.top1 { background: #9a7a20; }
+.rank-card-num.top2 { background: #7a7a7a; }
+.rank-card-num.top3 { background: #8a5a30; }
+
+.rank-card-body { flex: 1; min-width: 0; }
+.rank-card-name { font-size: 14px; font-weight: 600; color: var(--dark); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rank-card-loc  { font-size: 11px; color: var(--warm-gray); margin-bottom: 6px; font-family: var(--mono); letter-spacing: 0.03em; }
+.rank-card-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.rank-card-tag  {
+  font-size: 10px; font-family: var(--mono); letter-spacing: 0.04em;
+  padding: 2px 6px; border-radius: 2px;
+  background: var(--ivory3); color: var(--mid);
+}
+
+.rank-card-score {
+  text-align: right;
+  flex-shrink: 0;
+}
+.rank-score-num {
+  font-family: var(--sans);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 3px;
+}
+.grade-high .rank-score-num { color: var(--green-safe); }
+.grade-mid  .rank-score-num { color: var(--amber-warn); }
+.grade-low  .rank-score-num { color: var(--red-risk); }
+.rank-score-label { font-size: 9px; font-family: var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--warm-gray); }
+.rank-card-price { font-size: 12px; font-family: var(--mono); color: var(--accent); font-weight: 500; margin-top: 4px; }
+
+/* ── ANALYSIS COLOR GRADATION ── */
+.narr-score-bar-wrap { margin: 4px 0 20px; }
+.narr-score-bar-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(90deg,
+    #c0392b 0%, #e67e22 25%, #f1c40f 50%, #27ae60 75%, #1e8449 100%);
+  position: relative;
+  margin-top: 6px;
+}
+.narr-score-bar-thumb {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--darker);
+  border: 2px solid var(--ivory);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+/* Analysis section headers — sans only */
+.narr-title {
+  font-family: var(--sans);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--dark);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+.narr-top-name { font-family: var(--sans); font-size: 20px; font-weight: 600; color: var(--ivory); margin-bottom: 3px; letter-spacing: 0; }
+.narr-top-val  { font-family: var(--sans); font-size: 22px; font-weight: 700; color: var(--ivory); line-height: 1.1; margin-bottom: 3px; }
+.narr-top-key  { font-family: var(--sans); font-size: 10px; font-weight: 400; letter-spacing: 0.05em; text-transform: uppercase; color: var(--warm-gray); }
+.narr-section  { font-family: var(--sans); font-size: 15px; font-weight: 600; color: var(--dark); padding: 12px 0 8px; border-top: 1px solid var(--stone); margin-top: 6px; letter-spacing: 0; }
+.narr-section strong { color: var(--accent); }
+.narr-para     { font-family: var(--sans); font-size: 14px; color: var(--mid); line-height: 1.8; letter-spacing: 0; }
+.narr-para strong { color: var(--dark); font-weight: 600; }
+.narr-bullet   { font-family: var(--sans); font-size: 13px; color: var(--mid); padding: 4px 0 4px 18px; position: relative; line-height: 1.7; }
+.narr-bullet::before { content: '—'; position: absolute; left: 0; color: var(--accent); font-family: var(--sans); }
+.narr-bullet strong { color: var(--dark); font-weight: 600; }
+.narr-highlight {
+  background: #2f3136;
+  padding: 16px 20px 16px 28px;
+  border-radius: 4px;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ivory);
+  line-height: 1.7;
+  font-style: normal;
+  position: relative;
+  border-left: 3px solid var(--accent);
+}
+.narr-highlight::before { display: none; }
+.narr-highlight strong { color: var(--accent2); font-weight: 600; }
+.narr-warning  { font-family: var(--sans); }
+
+/* enhanced narrative */
+.narr-top-card {
+  background: #2f3136;   /* lebih terang dari dark/black */
+  color: white;
+  border-radius: 4px;
+  padding: 24px 28px;
+  margin-bottom: 32px;
+  position: relative;
+  overflow: hidden;
+}
+.narr-top-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+}
+.narr-top-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent2);
+  margin-bottom: 8px;
+}
+.narr-top-name {
+  font-family: var(--serif);
+  font-size: 24px;
+  font-weight: 300;
+  color: var(--ivory);
+  margin-bottom: 3px;
+  letter-spacing: 0.02em;
+}
+.narr-top-loc {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--warm-gray);
+  margin-bottom: 20px;
+  letter-spacing: 0.06em;
+}
+.narr-top-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+.narr-top-stat {
+  flex: 1;
+  text-align: center;
+}
+.narr-top-val {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 300;
+  color: var(--ivory);
+  line-height: 1.1;
+  margin-bottom: 3px;
+}
+.narr-top-key {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--warm-gray);
+}
+.narr-top-divider {
+  width: 1px;
+  height: 36px;
+  background: rgba(255,255,255,0.08);
+}
+.narr-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 32px;
+}
+.narr-para {
+  font-size: 14px;
+  color: var(--mid);
+  line-height: 1.85;
+  letter-spacing: 0.01em;
+}
+.narr-para strong { color: var(--dark); font-weight: 500; }
+.narr-section {
+  font-family: var(--serif);
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--dark);
+  padding: 12px 0 8px;
+  border-top: 1px solid var(--stone);
+  margin-top: 6px;
+  letter-spacing: 0.02em;
+}
+.narr-section strong { color: var(--accent); }
+.narr-bullet {
+  font-size: 13px;
+  color: var(--mid);
+  padding: 4px 0 4px 18px;
+  position: relative;
+  line-height: 1.7;
+}
+.narr-bullet::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-family: var(--serif);
+}
+.narr-bullet strong { color: var(--dark); font-weight: 500; }
+.narr-warning {
+  background: var(--amber-warn-bg);
+  border-left: 3px solid var(--amber-warn);
+  padding: 12px 16px;
+  border-radius: 0 4px 4px 0;
+  font-size: 13px;
+  color: var(--amber-warn);
+  line-height: 1.65;
+}
+.narr-warning strong { color: var(--amber-warn); font-weight: 600; }
+.narr-highlight {
+  background: #2f3136; 
+  padding: 16px 20px;
+  border-radius: 4px;
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 300;
+  color: var(--ivory);
+  line-height: 1.6;
+  font-style: italic;
+  position: relative;
+}
+.narr-highlight::before {
+  content: '"';
+  font-size: 48px;
+  font-family: var(--serif);
+  color: var(--accent);
+  position: absolute;
+  top: -8px; left: 12px;
+  line-height: 1;
+  opacity: 0.4;
+}
+.narr-highlight strong { color: var(--accent2); font-style: normal; font-weight: 500; }
+.narr-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 20px;
+  border-top: 1px solid var(--stone);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--stone2);
+}
+
+/* LEAFLET OVERRIDES */
+.leaflet-popup-content-wrapper {
+  background: var(--ivory) !important;
+  border: 1px solid var(--stone) !important;
+  box-shadow: var(--shadow-lg) !important;
+  border-radius: 4px !important;
+  color: var(--dark) !important;
+}
+.leaflet-popup-tip { background: var(--ivory) !important; }
+.leaflet-popup-close-button { color: var(--warm-gray) !important; font-size: 18px !important; top: 8px !important; right: 10px !important; }
+
+.popup-eyebrow { font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-bottom: 3px; }
+.popup-name { font-family: var(--serif); font-size: 18px; font-weight: 300; color: var(--dark); margin-bottom: 1px; }
+.popup-loc { font-family: var(--mono); font-size: 10px; color: var(--warm-gray); margin-bottom: 10px; }
+.popup-price { font-family: var(--serif); font-size: 22px; font-weight: 300; color: var(--accent); margin-bottom: 12px; }
+.popup-divider { height: 1px; background: var(--stone); margin-bottom: 10px; }
+.popup-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--ivory2); }
+.popup-row:last-child { border-bottom: none; }
+.popup-label { font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--warm-gray); }
+.popup-val { font-size: 12px; color: var(--dark); font-weight: 500; }
+.popup-score-big {
+  text-align: center;
+  padding: 10px 0 8px;
+  border-bottom: 1px solid var(--stone);
+  margin-bottom: 10px;
+}
+.popup-score-num { font-family: var(--serif); font-size: 40px; font-weight: 300; color: var(--darker); line-height: 1; }
+.popup-score-label { font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--warm-gray); margin-top: 2px; }
+
+/* divider line */
+.section-rule {
+  height: 1px;
+  background: linear-gradient(90deg, var(--stone), transparent);
+  margin: 0 28px;
+}
+
+/* ── RESPONSIVE: TABLET ── */
+@media (max-width: 1024px) {
+  .sidebar { width: 320px; }
+  .sidebar-head { padding: 20px 20px 14px; }
+  .chat-scroll { padding: 16px 20px; }
+  .input-area { padding: 14px 20px 18px; }
+  .narrative-scroll { padding: 28px 28px; }
+  .narr-title { font-size: 26px; }
+  .header { padding: 0 20px; }
+  .tabs { padding: 0 16px; }
+  .tab-btn { margin-right: 20px; }
+}
+
+/* ── RESPONSIVE: MOBILE ── */
+@media (max-width: 768px) {
+  html, body { height: auto; overflow: auto; }
+  body { font-size: 13px; }
+
+  /* Header: tetap di atas, kompak */
+  .header {
+    height: auto;
+    min-height: 56px;
+    padding: 10px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .logo { gap: 6px; flex-wrap: wrap; }
+  .logo-name { font-size: 20px; letter-spacing: 0.08em; }
+  .logo-sep { display: none; }
+  .logo-sub { font-size: 9px; letter-spacing: 0.14em; }
+  .header-right { margin-left: auto; gap: 10px; }
+  .header-ver { font-size: 9px; padding: 2px 6px; }
+
+  /* Workspace jadi vertikal: konten dulu, sidebar di bawah */
+  .workspace {
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  /* Sidebar full-width, height auto */
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-top: 1px solid var(--stone);
+    order: 2;
+  }
+  .sidebar-head { padding: 16px 18px 12px; }
+  .sidebar-title { font-size: 17px; }
+  .chat-scroll {
+    padding: 14px 18px;
+    max-height: 320px;
+    min-height: 180px;
+  }
+  .msg-user-bubble,
+  .msg-ai-bubble { max-width: 78vw; font-size: 13px; }
+  .input-area { padding: 12px 18px 16px; }
+  .chip { font-size: 10px; padding: 4px 8px; }
+  .query-input { font-size: 14px; /* hindari zoom iOS */ }
+
+  /* Content area */
+  .content { order: 1; }
+  .tabs {
+    padding: 0 12px;
+    height: 44px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    margin-right: 18px;
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+  .tab-count { font-size: 9px; flex-shrink: 0; }
+
+  /* Map: tinggi tetap supaya kelihatan di HP */
+  .panels { min-height: 60vh; }
+  #map { min-height: 60vh; }
+  .map-empty { min-height: 60vh; }
+
+  /* Table scroll horizontal */
+  .table-outer { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .prop-table { min-width: 720px; }
+  .prop-table thead th { padding: 8px 10px; font-size: 8px; }
+  .prop-table td { padding: 10px; }
+  .tbl-name { font-size: 12px; }
+  .tbl-loc { font-size: 9px; }
+  .tbl-price { font-size: 11px; }
+
+  /* Ranking cards mobile */
+  .ranking-scroll { padding: 14px 14px; gap: 8px; }
+  .rank-card { padding: 12px 14px; gap: 12px; }
+  .rank-card-name { font-size: 13px; }
+  .rank-score-num { font-size: 22px; }
+
+  /* Narrative */
+  .narrative-scroll { padding: 22px 18px; }
+  .narr-title { font-size: 22px; line-height: 1.2; }
+  .narr-meta { font-size: 9px; margin-bottom: 20px; padding-bottom: 14px; }
+  .narr-top-card { padding: 18px 18px; margin-bottom: 22px; }
+  .narr-top-name { font-size: 20px; }
+  .narr-top-row { flex-wrap: wrap; gap: 14px 0; }
+  .narr-top-stat { flex: 1 1 50%; }
+  .narr-top-val { font-size: 18px; }
+  .narr-top-divider { display: none; }
+  .narr-para { font-size: 13px; line-height: 1.7; }
+  .narr-section { font-size: 15px; }
+  .narr-highlight { font-size: 14px; padding: 14px 16px; }
+  .narr-footer { flex-wrap: wrap; font-size: 8px; gap: 6px; }
+
+  /* Leaflet popup tidak terlalu lebar */
+  .leaflet-popup-content { margin: 10px 12px !important; }
+  .popup-score-num { font-size: 32px; }
+}
+
+/* ── RESPONSIVE: SMALL PHONE ── */
+@media (max-width: 400px) {
+  .logo-sub { display: none; }
+  .header-ver { display: none; }
+  .chat-scroll { max-height: 260px; }
+  .narr-title { font-size: 19px; }
+  .narr-top-stat { flex: 1 1 100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="logo">
+    <span class="logo-name">GeoNest</span>
+    <div class="logo-sep"></div>
+    <span class="logo-sub">Bali Property Intelligence</span>
+  </div>
+  <div class="header-right">
+    <div class="header-ver">v6.5 · Bali Province</div>
+  </div>
+</header>
+
+<!-- WORKSPACE -->
+<div class="workspace">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <div class="sidebar-title">Find your ideal property</div>
+      <div class="sidebar-desc">Powered by Groq · Llama 3.3 70B</div>
+    </div>
+
+    <div class="chat-scroll" id="chatScroll">
+      <div class="msg-row">
+        <div class="msg-ai-wrap">
+          <div class="msg-ai-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+          </div>
+          <div class="msg-ai-bubble">
+            Tell me what matters to you — <em>location, budget, safety, lifestyle</em> — and I will rank every property in Bali by real geospatial intelligence.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-rule"></div>
+
+    <div class="input-area">
+      <div class="input-row">
+        <textarea
+          class="query-input"
+          id="queryInput"
+          placeholder="Describe your ideal property…"
+          rows="1"
+          onkeydown="onKey(event)"
+          oninput="grow(this)"
+        ></textarea>
+        <button class="submit-btn" id="submitBtn" onclick="submit()" aria-label="Search">
+          <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CONTENT -->
+  <div class="content">
+    <nav class="tabs">
+      <button class="tab-btn active" onclick="switchTab('map',this)">Map</button>
+      <button class="tab-btn" onclick="switchTab('ranking',this)">Rankings</button>
+      <button class="tab-btn" onclick="switchTab('table',this)">Data Table</button>
+      <button class="tab-btn" onclick="switchTab('narrative',this)">Analysis</button>
+      <span class="tab-count" id="tabCount">— results</span>
+    </nav>
+
+    <div class="panels">
+
+      <!-- MAP -->
+      <div class="panel active" id="panel-map">
+        <div id="mapEmpty" class="map-empty">
+          <div class="map-empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+          </div>
+          <p>Your search results will appear here</p>
+        </div>
+        <div id="map" style="display:none;flex:1;"></div>
+      </div>
+
+      <!-- RANKING CARDS -->
+      <div class="panel" id="panel-ranking">
+        <div class="ranking-scroll" id="rankingBody">
+          <div class="ranking-empty">No results yet</div>
+        </div>
+      </div>
+
+      <!-- TABLE -->
+      <div class="panel" id="panel-table">
+        <div class="table-outer">
+          <table class="prop-table">
+            <thead>
+              <tr>
+                <th style="width:44px">Rank</th>
+                <th>Property</th>
+                <th>Price / mo</th>
+                <th>Score</th>
+                <th>Flood</th>
+                <th>Landslide</th>
+                <th>Terrain</th>
+                <th>Road km</th>
+                <th>Beach km</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <tr><td colspan="9" style="text-align:center;padding:48px;color:var(--stone2);font-family:var(--serif);font-style:italic;font-size:16px;font-weight:300;">No results yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- NARRATIVE -->
+      <div class="panel" id="panel-narrative">
+        <div class="narrative-scroll" id="narrativeScroll">
+          <div class="narr-empty">
+            <p>Analysis will appear<br>after your first search</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const WEBHOOK_URL = '/webhook/geonest';
+
+let leafMap = null;
+let markers = [];
+let results = [];
+let busy = false;
+
+function initLeaflet() {
+  if (leafMap) return;
+  document.getElementById('map').style.display = 'block';
+  document.getElementById('mapEmpty').style.display = 'none';
+  leafMap = L.map('map').setView([-8.5, 115.2], 10);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution:'© OpenStreetMap © CartoDB', maxZoom:19
+  }).addTo(leafMap);
+}
+
+function makeMarker(rank, score) {
+  const borderColor = score >= 75 ? '#3d7a5c' : score >= 50 ? '#9a7a20' : '#8b3a3a';
+  const bgColor = rank <= 3 ? '#1a1510' : '#6b6258';
+  return L.divIcon({
+    html:`<div style="width:34px;height:34px;border-radius:50%;background:${bgColor};color:#f8f5f0;display:flex;align-items:center;justify-content:center;font-size:13px;font-family:'Cormorant Garamond',serif;font-weight:300;letter-spacing:0.05em;border:1.5px solid ${borderColor};box-shadow:0 2px 12px rgba(0,0,0,0.22);">${rank}</div>`,
+    className:'', iconSize:[34,34], iconAnchor:[17,17], popupAnchor:[0,-20]
+  });
+}
+
+function riskClass(r) {
+  return r === 'low' ? 'rp-low' : r === 'medium' ? 'rp-mid' : 'rp-high';
+}
+function scoreClass(s) {
+  // v6.1: pure 0–100 liveability scale
+  return s >= 75 ? 'sc-high' : s >= 50 ? 'sc-mid' : 'sc-low';
+}
+
+// v6.1: render risk_warning tag as emoji badge
+function riskBadge(p, type) {
+  const warn = p.risk_warning;
+  if (warn && warn[type]) {
+    const w = warn[type];
+    const cls = w.level === 'high' ? 'rb-danger' : w.level === 'medium' ? 'rb-caution' : 'rb-safe';
+    return `<span class="risk-badge ${cls}">${w.emoji} ${w.level}</span>`;
+  }
+  // fallback to old pill if risk_warning not present
+  return `<span class="risk-pill ${riskClass(p[type+'_risk'])}">${p[type+'_risk']||'—'}</span>`;
+}
+
+// v6.1: overall risk badge for popup
+function overallRiskBadge(p) {
+  if (p.risk_warning && p.risk_warning.overall) {
+    const o = p.risk_warning.overall;
+    const cls = o.level === 'danger' ? 'rb-danger' : o.level === 'caution' ? 'rb-caution' : 'rb-safe';
+    return `<span class="risk-badge ${cls}">${o.emoji} ${o.level}</span>`;
+  }
+  // fallback: derive from both flood AND landslide
+  const f = p.flood_risk || 'low';
+  const l = p.landslide_risk || 'low';
+  const hasHigh   = f === 'high'   || l === 'high';
+  const hasMedium = f === 'medium' || l === 'medium';
+  const emoji = hasHigh ? '🚨' : hasMedium ? '⚠️' : '✅';
+  const level = hasHigh ? 'danger' : hasMedium ? 'caution' : 'safe';
+  const cls   = hasHigh ? 'rb-danger' : hasMedium ? 'rb-caution' : 'rb-safe';
+  return `<span class="risk-badge ${cls}">${emoji} ${level}</span>`;
+}
+
+function makeDotMarker() {
+  return L.divIcon({
+    html:`<div style="width:8px;height:8px;border-radius:50%;background:#c8bfb2;border:1.5px solid #9a9088;opacity:0.7;"></div>`,
+    className:'', iconSize:[8,8], iconAnchor:[4,4], popupAnchor:[0,-8]
+  });
+}
+
+function renderResults(props, narrative) {
+  results = props;
+  document.getElementById('tabCount').textContent = `${props.length} result${props.length!==1?'s':''}`;
+
+  initLeaflet();
+  markers.forEach(m => m && m.remove());
+  markers = [];
+  // clear any existing dot markers
+  if (window._dotMarkers) { window._dotMarkers.forEach(m=>m.remove()); }
+  window._dotMarkers = [];
+
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  const rankBody = document.getElementById('rankingBody');
+  rankBody.innerHTML = '';
+  const bounds = [];
+
+  // ── MAP: plot ALL properties as faint dots first ──────
+  // (allResults contains all 100 props if available, else just props)
+  const allForDots = window._allProperties || props;
+  allForDots.forEach(p => {
+    if (!p.lat || !p.lon) return;
+    const dot = L.marker([p.lat, p.lon], { icon: makeDotMarker(), zIndexOffset: -100 })
+      .addTo(leafMap);
+    window._dotMarkers.push(dot);
+  });
+
+  // ── MAP + TABLE + RANKING: top 10 ────────────────────
+  props.forEach((p, i) => {
+    const rank = i + 1;
+    const score = p.geonest_score || 0;
+    const rankClass = i < 3 ? `r${rank}` : 'rn';
+    const gradeClass = score >= 75 ? 'grade-high' : score >= 50 ? 'grade-mid' : 'grade-low';
+    const numClass = rank === 1 ? 'top1' : rank === 2 ? 'top2' : rank === 3 ? 'top3' : '';
+
+    // ── RANKING CARD ──────────────────────────────────
+    const card = document.createElement('div');
+    card.className = `rank-card ${gradeClass}`;
+    const riskOverall = p.risk_warning?.overall;
+    const riskTag = riskOverall
+      ? `<span class="rank-card-tag">${riskOverall.emoji} ${riskOverall.level} risk</span>`
+      : `<span class="rank-card-tag">${p.flood_risk||'—'} flood</span>`;
+    const terrainTag = p.terrain_label ? `<span class="rank-card-tag">${p.terrain_label}</span>` : '';
+    const beachTag = p.beach_distance_km != null ? `<span class="rank-card-tag">🏖 ${p.beach_distance_km.toFixed(1)}km</span>` : '';
+    card.innerHTML = `
+      <div class="rank-card-num ${numClass}">${rank}</div>
+      <div class="rank-card-body">
+        <div class="rank-card-name">${p.name}</div>
+        <div class="rank-card-loc">${p.subdistrict||p.area} · ${p.city}</div>
+        <div class="rank-card-tags">
+          ${riskTag}${terrainTag}${beachTag}
+          <span class="rank-card-tag">🛣 ${p.road_distance_km?p.road_distance_km.toFixed(1)+'km':'—'}</span>
+        </div>
+        <div class="rank-card-price">IDR ${(p.price_idr/1000000).toFixed(1)}M / mo</div>
+      </div>
+      <div class="rank-card-score">
+        <div class="rank-score-num">${score}</div>
+        <div class="rank-score-label">/ 100</div>
+      </div>`;
+    card.onclick = () => {
+      document.querySelectorAll('.rank-card').forEach(c=>c.classList.remove('active-card'));
+      card.classList.add('active-card');
+      switchTab('map', document.querySelectorAll('.tab-btn')[0]);
+      setTimeout(() => {
+        if (leafMap && markers[i]) {
+          leafMap.invalidateSize();
+          leafMap.setView([p.lat, p.lon], 15);
+          markers[i].openPopup();
+        }
+      }, 120);
+    };
+    rankBody.appendChild(card);
+
+    // ── TABLE ROW ────────────────────────────────────
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="rank-glyph ${rankClass}">${rank}</span></td>
+      <td>
+        <div class="tbl-name">${p.name}</div>
+        <div class="tbl-loc">${p.subdistrict||p.area} · ${p.city}</div>
+      </td>
+      <td><span class="tbl-price">IDR ${(p.price_idr/1000000).toFixed(1)}M</span></td>
+      <td><span class="score-badge ${scoreClass(score)}">${score}</span></td>
+      <td>${riskBadge(p, 'flood')}</td>
+      <td>${riskBadge(p, 'landslide')}</td>
+      <td><span class="tbl-num">${p.terrain_label||'—'}</span></td>
+      <td><span class="tbl-num">${p.road_distance_km?p.road_distance_km.toFixed(2):'—'}</span></td>
+      <td><span class="tbl-num">${p.beach_distance_km?p.beach_distance_km.toFixed(1):'—'}</span></td>
+    `;
+    tr.onclick = () => {
+      document.querySelectorAll('.prop-table tr').forEach(r=>r.classList.remove('active-row'));
+      tr.classList.add('active-row');
+      switchTab('map', document.querySelector('.tab-btn'));
+      setTimeout(() => {
+        if (leafMap && markers[i]) {
+          leafMap.invalidateSize();
+          leafMap.setView([p.lat, p.lon], 15);
+          markers[i].openPopup();
+        }
+      }, 120);
+    };
+    tbody.appendChild(tr);
+
+    // ── MAP NUMBERED MARKER (top 10) ─────────────────
+    const facRows = p.facility_distances
+      ? Object.entries(p.facility_distances).filter(([,v])=>v<3).sort((a,b)=>a[1]-b[1]).slice(0,4)
+          .map(([k,v])=>`<div class="popup-row"><span class="popup-label">${k}</span><span class="popup-val">${v.toFixed(2)} km</span></div>`).join('')
+      : '';
+
+    const popup = `
+      <div style="min-width:220px;padding:4px 2px">
+        <div class="popup-score-big">
+          <div class="popup-score-num">${score}</div>
+          <div class="popup-score-label">GeoNest Score</div>
+          ${overallRiskBadge(p) ? `<div style="margin-top:6px">${overallRiskBadge(p)}</div>` : ''}
+        </div>
+        <div class="popup-eyebrow">Rank ${rank} of ${props.length}</div>
+        <div class="popup-name">${p.name}</div>
+        <div class="popup-loc">${p.subdistrict||p.area}, ${p.city}</div>
+        <div class="popup-price">IDR ${(p.price_idr/1000000).toFixed(1)} juta / mo</div>
+        <div class="popup-divider"></div>
+        <div class="popup-row"><span class="popup-label">Flood risk</span><span class="popup-val">${riskBadge(p,'flood')}</span></div>
+        <div class="popup-row"><span class="popup-label">Landslide risk</span><span class="popup-val">${riskBadge(p,'landslide')}</span></div>
+        <div class="popup-row"><span class="popup-label">Terrain</span><span class="popup-val">${p.terrain_label||'—'}</span></div>
+        <div class="popup-row"><span class="popup-label">Road dist.</span><span class="popup-val">${p.road_distance_km?p.road_distance_km.toFixed(2)+' km':'—'}</span></div>
+        <div class="popup-row"><span class="popup-label">Beach dist.</span><span class="popup-val">${p.beach_distance_km?p.beach_distance_km.toFixed(1)+' km':'—'}</span></div>
+        ${facRows?`<div class="popup-divider" style="margin-top:6px"></div><div class="popup-eyebrow" style="margin-top:6px">Nearby facilities</div>${facRows}`:''}
+      </div>`;
+
+    if (!p.lat || !p.lon) { markers.push(null); return; }
+    const marker = L.marker([p.lat,p.lon],{icon:makeMarker(rank,score), zIndexOffset: 100})
+      .addTo(leafMap).bindPopup(popup,{maxWidth:280, autoPan:true, autoPanPadding:[40,40]});
+    marker.on('click',()=>{
+      document.querySelectorAll('.prop-table tr').forEach(r=>r.classList.remove('active-row'));
+      document.querySelectorAll('.rank-card').forEach(c=>c.classList.remove('active-card'));
+      if(tbody.rows[i]) tbody.rows[i].classList.add('active-row');
+      if(rankBody.children[i]) rankBody.children[i].classList.add('active-card');
+    });
+    markers.push(marker);
+    if (p.lat && p.lon) bounds.push([p.lat, p.lon]);
+  });
+
+  // Zoom map to fit top 10 markers only
+  if(bounds.length) setTimeout(()=>leafMap.fitBounds(bounds,{padding:[50,50]}),100);
+
+  // ── NARRATIVE ────────────────────────────────────────
+  if(narrative) {
+    const lines = narrative.split('\n').filter(l => l.trim());
+    let formattedHtml = '';
+    lines.forEach(line => {
+      // Skip markdown table rows and separators entirely
+      if (/^\|.*\|$/.test(line.trim())) return;
+      if (/^\|[-:\s|]+\|$/.test(line.trim())) return;
+      // Skip bare horizontal rules
+      if (/^[-*_]{3,}$/.test(line.trim())) return;
+
+      const clean = line
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/#{1,4}\s+/g, '')
+        .replace(/[🥇🥈🥉🏆🌴🏡🌿]/g, '')
+        .trim();
+      if (!clean) return;
+      if (clean.startsWith('⚠️') || clean.toLowerCase().includes('warning') || clean.toLowerCase().includes('note:')) {
+        formattedHtml += `<div class="narr-warning">${clean.replace('⚠️','').trim()}</div>`;
+      } else if (clean.startsWith('✅') || clean.startsWith('💡') || clean.toLowerCase().includes('bottom line') || clean.toLowerCase().includes('recommendation') || clean.toLowerCase().includes('my take')) {
+        formattedHtml += `<div class="narr-highlight">${clean.replace(/^[✅💡]/,'').trim()}</div>`;
+      } else if (clean.match(/^(Rank\s*\d|Top\s*\d|#\d|Property \d)/i)) {
+        formattedHtml += `<div class="narr-section">${clean}</div>`;
+      } else if (clean.startsWith('-') || clean.startsWith('•')) {
+        formattedHtml += `<div class="narr-bullet">${clean.replace(/^[-•]\s*/,'')}</div>`;
+      } else {
+        formattedHtml += `<p class="narr-para">${clean}</p>`;
+      }
+    });
+
+    const top = props[0];
+    const topScore = top.geonest_score || 0;
+    const barPct = topScore; // 0–100
+    const barColor = topScore >= 75 ? 'var(--green-safe)' : topScore >= 50 ? 'var(--amber-warn)' : 'var(--red-risk)';
+
+    document.getElementById('narrativeScroll').innerHTML = `
+      <div class="narr-eyebrow">AI Property Analysis</div>
+      <div class="narr-title">Property Intelligence Report</div>
+      <div class="narr-meta">${props.length} properties ranked · Bali Province · ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div>
+
+      <div class="narr-top-card">
+        <div class="narr-top-label">Top Ranked Property</div>
+        <div class="narr-top-name">${top.name}</div>
+        <div class="narr-top-loc">${top.subdistrict||top.area} · ${top.city}</div>
+
+        <div class="narr-score-bar-wrap">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;">
+            <span style="font-family:var(--sans);font-size:32px;font-weight:800;color:#fff;line-height:1;">${topScore}</span>
+            <span style="font-family:var(--sans);font-size:11px;color:var(--warm-gray);letter-spacing:0.08em;text-transform:uppercase;">out of 100</span>
+          </div>
+          <div class="narr-score-bar-track">
+            <div class="narr-score-bar-thumb" style="left:${barPct}%"></div>
+          </div>
+        </div>
+
+        <div class="narr-top-row">
+          <div class="narr-top-stat">
+            <div class="narr-top-val">${(top.price_idr/1000000).toFixed(1)}M</div>
+            <div class="narr-top-key">IDR / mo</div>
+          </div>
+          <div class="narr-top-divider"></div>
+          <div class="narr-top-stat">
+            <div class="narr-top-val">${(() => { if (top.risk_warning) return top.risk_warning.overall.emoji; const f=top.flood_risk||'low', l=top.landslide_risk||'low'; return (f==='high'||l==='high') ? '🚨' : (f==='medium'||l==='medium') ? '⚠️' : '✅'; })()}</div>
+            <div class="narr-top-key">Risk level</div>
+          </div>
+          <div class="narr-top-divider"></div>
+          <div class="narr-top-stat">
+            <div class="narr-top-val">${top.terrain_label||'—'}</div>
+            <div class="narr-top-key">Terrain</div>
+          </div>
+          <div class="narr-top-divider"></div>
+          <div class="narr-top-stat">
+            <div class="narr-top-val">${top.beach_distance_km != null ? top.beach_distance_km.toFixed(1)+'km' : '—'}</div>
+            <div class="narr-top-key">Beach</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="narr-content">${formattedHtml}</div>
+
+      <div class="narr-footer">
+        <span>GeoNest v6.2</span>
+        <span>·</span>
+        <span>Powered by BNPB · BPS · SRTM · OSM</span>
+        <span>·</span>
+        <span>Claude AI</span>
+      </div>
+    `;
+  }
+}
+
+// ── MARKDOWN → HTML converter for chat bubbles ───────────
+function markdownToHtml(text) {
+  if (!text) return '';
+  return text
+    // Strip markdown table rows and separators entirely
+    .replace(/^\|.*\|$/gm, '')
+    .replace(/^\|[-:\s|]+\|$/gm, '')
+    // Strip heading markers (## ### etc)
+    .replace(/^#{1,4}\s+(.+)$/gm, '<strong>$1</strong>')
+    // Bold
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    // Italic
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    // Horizontal rules
+    .replace(/^[-*_]{3,}$/gm,
+      '<hr style="border:none;border-top:1px solid var(--stone);margin:10px 0">')
+    // Bullet points → styled bullets
+    .replace(/^[-•*]\s+(.+)$/gm,
+      '<div style="padding:2px 0 2px 14px;position:relative">' +
+      '<span style="position:absolute;left:0;color:var(--accent)">—</span>$1</div>')
+    // Line breaks: double newline → paragraph break
+    .replace(/\n{2,}/g, '<br><br>')
+    // Single newline → space (avoid awkward wrapping)
+    .replace(/\n/g, ' ')
+    // Clean up any empty lines left from table stripping
+    .replace(/(<br>){3,}/g, '<br><br>')
+    .trim();
+}
+
+function addMsg(html, isUser) {
+  const scroll = document.getElementById('chatScroll');
+  const div = document.createElement('div');
+  div.className = 'msg-row';
+  if(isUser) {
+    div.innerHTML = `<div class="msg-user-wrap"><div class="msg-user-bubble">${html}</div></div>`;
+  } else {
+    div.innerHTML = `<div class="msg-ai-wrap"><div class="msg-ai-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg></div><div class="msg-ai-bubble">${html}</div></div>`;
+  }
+  scroll.appendChild(div);
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+function showTyping() {
+  const scroll = document.getElementById('chatScroll');
+  const div = document.createElement('div');
+  div.className = 'msg-row'; div.id = 'typingRow';
+  div.innerHTML = `<div class="msg-ai-wrap"><div class="msg-ai-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg></div><div class="msg-ai-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div></div>`;
+  scroll.appendChild(div);
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+function removeTyping() {
+  const t = document.getElementById('typingRow');
+  if(t) t.remove();
+}
+
+async function submit() {
+  const inp = document.getElementById('queryInput');
+  const q = inp.value.trim();
+  if(!q || busy) return;
+  busy = true;
+  document.getElementById('submitBtn').disabled = true;
+  inp.value = ''; grow(inp);
+  addMsg(q, true);
+  showTyping();
+  switchTab('map', document.querySelectorAll('.tab-btn')[0]);
+
+  // Build last_property context from top result of previous search
+  const lastProp = (results && results.length > 0) ? {
+    name:               results[0].name,
+    area:               results[0].area,
+    city:               results[0].city,
+    price_idr:          results[0].price_idr,
+    geonest_score:      results[0].geonest_score,
+    flood_risk:         results[0].flood_risk,
+    flood_risk_source:  results[0].flood_risk_source,
+    landslide_risk:     results[0].landslide_risk,
+    landslide_risk_source: results[0].landslide_risk_source,
+    terrain_label:      results[0].terrain_label,
+    road_distance_km:   results[0].road_distance_km,
+    beach_distance_km:  results[0].beach_distance_km,
+    coastal_label:      results[0].coastal_label,
+    population_density: results[0].population_density,
+    facility_distances: results[0].facility_distances,
+    risk_warning:       results[0].risk_warning
+  } : null;
+
+  try {
+    const res = await fetch(WEBHOOK_URL, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        message: q,
+        chatInput: q,          // keep for backward compat
+        last_property: lastProp
+      })
+    });
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    removeTyping();
+
+    let props=[], narrative='', allProperties=[];
+    try {
+      if(data.properties && Array.isArray(data.properties)) {
+        props = data.properties.filter(d => d && d.lat && d.lon && d.name);
+        allProperties = data.all_properties || props;
+        narrative = data.narrative || '';
+      } else if(Array.isArray(data)) {
+        const summaryItem = data.find(d => d && d._summary);
+        if (summaryItem && summaryItem.all_properties) {
+          allProperties = summaryItem.all_properties.filter(d => d && d.lat && d.lon);
+        }
+        // Check for followup or conversational response
+        const followupItem = data.find(d => d && d._followup);
+        const convItem = data.find(d => d && (d.text || d.output) && !d.lat && !d._summary && !d._followup);
+        props = data.filter(d => d && d.name && d.lat && d.lon && !d._summary && !d._followup);
+        if (allProperties.length === 0) allProperties = props;
+        if(convItem) narrative = convItem.text || convItem.output || '';
+        if(followupItem && followupItem.narrative) narrative = followupItem.narrative;
+      } else if(data.message && !data.narrative) {
+        // Pure error/no-results message
+        props = [];
+        allProperties = [];
+        narrative = '';
+      } else if(data.narrative || data.text || data.output) {
+        // Conversational response from LLM Chain 2 — no property search
+        props = [];
+        narrative = data.narrative || data.text || data.output || '';
+      }
+    } catch(e) {
+      console.error('Parse error:', e);
+      props = [];
+      allProperties = [];
+    }
+
+    // Store all properties globally for dot markers
+    if (allProperties.length > (window._allProperties||[]).length) {
+      window._allProperties = allProperties;
+    } else if (!window._allProperties || window._allProperties.length === 0) {
+      window._allProperties = props;
+    }
+
+    if(props.length > 0) {
+      // Property search results
+      renderResults(props, narrative);
+      const topName  = props[0]?.name || 'a property';
+      const topScore = props[0]?.geonest_score ?? '—';
+      addMsg(`Found <strong>${props.length} propert${props.length!==1?'ies':'y'}</strong>. <strong>${topName}</strong> ranks first with a GeoNest score of <strong>${topScore}</strong>. Explore the map and rankings for full detail.`, false);
+    } else if(narrative) {
+      // Conversational / follow-up / agent answer — render markdown before display
+      addMsg(markdownToHtml(narrative), false);
+    } else {
+      // Truly no results
+      addMsg('Your search was not found in our property database. Try a different location, increase your budget, or relax the filters.', false);
+    }
+
+  } catch(err) {
+    removeTyping();
+    addMsg(`Could not reach the GeoNest server: <em>${err.message}</em>. Verify your webhook URL in the configuration.`, false);
+  }
+  busy = false;
+  document.getElementById('submitBtn').disabled = false;
+}
+
+function switchTab(name, el) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  if(el) el.classList.add('active');
+  document.getElementById(`panel-${name}`)?.classList.add('active');
+  if(name==='map' && leafMap) {
+    setTimeout(()=>{ leafMap.invalidateSize(); }, 100);
+  }
+}
+
+function onKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();submit();} }
+function grow(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,110)+'px'; }
+function useChip(el) { document.getElementById('queryInput').value=el.textContent; submit(); }
+
+
+</script>
+</body>
+</html>
