@@ -690,8 +690,28 @@ SEMANTIC LOCATION INFERENCE (only when no explicit location given):
 - "near airport", "close to airport" → "location": "Kuta"
 
 FOLLOW-UP DETECTION:
-If the message is a follow-up about a previous property result
-("what about that villa", "tell me more", "why score low", "is it safe", "ceritakan") — return:
+A follow-up is any message that refers to a previously shown property result or asks for more detail,
+opinion, or suitability about something already displayed. Detect it broadly — it does NOT need to
+match exact phrases.
+
+Mark as follow-up (is_followup: true) when the user:
+- Asks about safety, suitability, or quality: "is it safe?", "is this suitable for family?",
+  "good for kids?", "cocok ga?", "bagus ga?", "aman ga?", "layak ga?"
+- Asks for more detail: "tell me more", "ceritakan", "jelaskan", "what do you think?",
+  "gimana menurut kamu?", "kenapa skornya rendah?", "why low score?"
+- Uses pronouns referring to a previous result: "that villa", "the property", "that place",
+  "yang itu", "vila itu", "rumah itu", "tempat itu", "this one", "yang pertama"
+- Asks a comparison or opinion: "which is better?", "mana yang lebih baik?",
+  "compare them", "recommend me", "what about the first one?"
+- Short ambiguous questions after a search: "why?", "how?", "really?", "and the risk?",
+  "what about the price?", "flood risk?", "apakah aman?"
+- Family/lifestyle fit questions after a search: "suitable for family?", "good for expats?",
+  "cocok untuk keluarga?", "bisa untuk anak kecil?"
+
+Do NOT mark as follow-up when the user clearly starts a NEW search with a location, budget,
+or new criteria (e.g. "find me a villa in Ubud under 10 juta").
+
+When is_followup is true, return ONLY:
 {"is_followup": true, "location": null, "max_budget_idr": null,
 "flood_risk": "any", "landslide_risk": "any", "beach_preference": "any",
 "nearby_facilities": [], "elevation_preference": "any", "population_density": "any",
@@ -857,9 +877,16 @@ async def geonest_webhook(body: WebhookBody):
 
     # ── FOLLOW-UP handling ────────────────────────────────
     if filters.get("is_followup"):
-        context = ""
         if body.last_property:
-            context = f"\n\nContext — the user was previously viewing this property:\n{json.dumps(body.last_property)}"
+            prop = body.last_property
+            context = (
+                f"\n\nThe user is asking about this property that was just shown to them:\n"
+                f"{json.dumps(prop, indent=2)}\n\n"
+                f"Answer their question specifically about **{prop.get('name', 'this property')}**. "
+                f"Be direct and helpful. Max 200 words."
+            )
+        else:
+            context = "\n\nNo previous property context available. Answer as a general Bali property expert."
         followup_response = groq_client.chat.completions.create(
             model=GROQ_MODEL,
             messages=[
