@@ -1,3 +1,0 @@
-data/bali_landslide_risk.geojson filter=lfs diff=lfs merge=lfs -text
-data/bali_roads.geojson filter=lfs diff=lfs merge=lfs -text
-data/bali_admin.geojson filter=lfs diff=lfs merge=lfs -text

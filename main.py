@@ -4,7 +4,7 @@ Self-hosted FastAPI backend (replaces n8n + Claude API)
 AI: Groq (free) with Llama 3.3 70B
 """
 
-import os, json, math, csv, io
+import os, json, math, csv, io, urllib.request
 from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import Any
@@ -18,6 +18,20 @@ from groq import Groq
 
 # ── PATHS ──────────────────────────────────────────────────
 BASE   = Path(__file__).parent
+
+# ── CDN FALLBACK (used when data/ files are not bundled) ───
+CDN_BASE = "https://cdn.jsdelivr.net/gh/setiyadi07/geonest-data@main"
+CDN_FILES = {
+    "bali_admin.geojson":                    f"{CDN_BASE}/bali_admin.geojson",
+    "bali_roads.geojson":                    f"{CDN_BASE}/bali_roads.geojson",
+    "bali_flood_risk.geojson":               f"{CDN_BASE}/bali_flood_risk.geojson",
+    "bali_landslide_risk.geojson":           f"{CDN_BASE}/bali_landslide_risk.geojson",
+    "bali_elevation.geojson":               f"{CDN_BASE}/bali_elevation.geojson",
+    "bali_coastal.geojson":                  f"{CDN_BASE}/bali_coastal.geojson",
+    "public_support_facillities.geojson":    f"{CDN_BASE}/public_support_facillities.geojson",
+    "bali_properties_rent.csv":              f"{CDN_BASE}/bali_properties_rent.csv",
+    "bali_population.tsv":                   f"{CDN_BASE}/bali_population.tsv",
+}
 DATA   = BASE / "data"
 STATIC = BASE / "static"
 
@@ -34,14 +48,26 @@ _data: dict[str, Any] = {}
 # SECTION 1 — DATA LOADING
 # ══════════════════════════════════════════════════════════
 
+def ensure_file(name: str) -> Path:
+    local = DATA / name
+    if not local.exists():
+        url = CDN_FILES.get(name)
+        if not url:
+            raise FileNotFoundError(f"No CDN URL for {name}")
+        print(f"  Downloading {name} from CDN...", flush=True)
+        DATA.mkdir(exist_ok=True)
+        urllib.request.urlretrieve(url, local)
+        print(f"  Downloaded {name}", flush=True)
+    return local
+
 def load_geojson(name: str) -> dict:
-    with open(DATA / name, encoding="utf-8") as f:
+    with open(ensure_file(name), encoding="utf-8") as f:
         return json.load(f)
 
 
 def load_population() -> dict[str, int]:
     pop = {}
-    with open(DATA / "bali_population.tsv", encoding="utf-8") as f:
+    with open(ensure_file("bali_population.tsv"), encoding="utf-8") as f:
         lines = f.read().split("\n")[1:]  # skip header
     for line in lines:
         if not line.strip():
@@ -59,7 +85,7 @@ def load_population() -> dict[str, int]:
 
 def load_properties() -> list[dict]:
     props = []
-    with open(DATA / "bali_properties_rent.csv", encoding="utf-8") as f:
+    with open(ensure_file("bali_properties_rent.csv"), encoding="utf-8") as f:
         reader = csv.reader(f)
         next(reader)  # skip header
         for row in reader:
